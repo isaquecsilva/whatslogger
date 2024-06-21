@@ -1,6 +1,7 @@
 window.whatslogger = {
+	lastMessageHash: '',
 	set: function(logger) {
-		const mutationCallback = (mutationList, observer) => {
+		const mutationCallback = async (mutationList, observer) => {
 			for (const mutation of mutationList) {
 				if (mutation.type == 'attributes') {
 					let element = mutation.target
@@ -16,14 +17,24 @@ window.whatslogger = {
 							content: allSpans[allSpans.length - 1]?.innerText,
 						}
 
-						console.log(msg)
+						var encoder = new TextEncoder();
+						var hash = Array.from(new Int8Array(
+							await crypto.subtle.digest('SHA-1', encoder.encode(JSON.stringify(msg.from+msg.content)))
+						)).reduce((acc, byte) => acc += byte.toString(16).replace('-', ''), '')
 
-						// when true, it'll use SpeechSynthesis api to speak messages
-						// received from your contacts
-						if (window.whatslogger.useVoice == true) {
-							let utterance = new SpeechSynthesisUtterance(`${msg.from || 'alguém'} disse: ${msg.content}`)
-							speechSynthesis.speak(utterance)
+						if (hash != window.whatslogger.lastMessageHash) {
+							window.whatslogger.lastMessageHash = hash;							
+
+							console.log(msg)
+
+							// when true, it'll use SpeechSynthesis api to speak messages
+							// received from your contacts
+							if (window.whatslogger.useVoice == true) {
+								let utterance = new SpeechSynthesisUtterance(`${msg.from || 'alguém'} disse: ${msg.content}`)
+								speechSynthesis.speak(utterance)
+							}
 						}
+
 					}
 				}
 			}
